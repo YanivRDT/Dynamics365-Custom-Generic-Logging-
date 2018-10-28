@@ -1,0 +1,129 @@
+///demonstrating logging trace and exception 
+
+(function (ns) {
+    //constants
+    var Constants = {
+        MSG_GENERAL_FAILURE: "Something went wrong :( Fault referene token: "
+    };
+
+    //members
+
+    //private methods
+
+    //extract Global Context object 
+    getContext = function () {
+        var result = null;
+
+        if (typeof GetGlobalContext != "undefined") {
+            result = GetGlobalContext();
+        }
+        else {
+            if (typeof Xrm != "undefined") {
+                result = Xrm.Page.context;
+            }
+            else {
+                throw new Error(Constants.ERR_NO_CONTEXT);
+            }
+        }
+
+        return result;
+    }
+
+    //handle success 
+    SuccessHandler = function (data) {
+        $("#userMessages").append("<p>Log reference token: " + data + "</p>");
+    }
+
+    //handle failure
+    FailureHandler = function (XmlHttpRequest, textStatus, errorThrown) {
+        if ((typeof Xrm != "undefined") && (contextRecordId != null)) {
+            //notify user in form context
+            parent.Xrm.Page.ui.setFormNotification(Constants.ERR_MSG_GENERAL,
+                "ERROR",
+                "ERR1");
+        }
+        else {
+            //notify user
+            $("#userMessages").text(Constants.ERR_MSG_GENERAL);
+        }
+    }
+
+    //public methods 
+
+    //log trace record and display result 
+    ns.LogTraceRecord = function (message, description) {
+        //clear message
+        $("#userMessages").text("");
+
+        //define light trace entry
+        var traceEntry = {
+            //title
+            "title": $("#title").val(),
+            //description
+            "description": $("#description").val()
+        };
+        debugger
+        Utils.LogTrace(traceEntry, true, SuccessHandler, FailureHandler);
+
+        $("#userMessages").text("Hang on, working on it...");
+    }
+
+    //perform some business logic including tracing and exception handling 
+    ns.DoSomeBusinessLogic = function () {
+        //define verbose trace entry
+        var traceEntry = {
+            //title
+            "title": "loggingSample.DoSomeBusinessLogic",
+            //description
+            "description": "Start execution",
+            //related business record id 
+            "relatedBusinessRecordId": "2514FC63-9E58-4D1E-8226-69256D0197E3",
+            //related business record URL
+            "relatedBusinessRecordURL": "https://xxx.crm.dynamics.com/main.aspx?etc=8&extraqs=&histKey=520872127&id=%7b2514FC63-9E58-4D1E-8226-69256D0197E3%7d&newWindow=true&pagetype=entityrecord#923042",
+            //set current user id as related user id 
+            "relatedUserId": getContext().userSettings.userId
+        };
+
+        //trace function execution start asynchronously
+        Utils.LogTrace(traceEntry, true, SuccessHandler, FailureHandler);
+
+        try {
+            //some business logic including some exception 
+            NonExistingFunctionCall();
+        }
+        catch (err) {
+            //define verbose exception entry
+            var exceptionEntry = {
+                //title
+                "title": "loggingSample.DoSomeBusinessLogic",
+                //description
+                "description": Constants.MSG_GENERAL_FAILURE,
+                //related business record id 
+                "errorMessage": err.message,
+                //related business record URL
+                "stackTrace": err.stack
+            };
+
+            //log exception and return reference token
+            var referenceToken = Utils.LogException(exceptionEntry, false);
+
+            //notify user with a reference token to report back to admin
+            alert(Constants.MSG_GENERAL_FAILURE + referenceToken);
+        }
+        finally {
+            //define thin trace entry 
+            var traceEntry = {
+                //title
+                "title": "loggingSample.DoSomeBusinessLogic",
+                //description
+                "description": "Start execution",
+            };
+
+            //trace function exectuion end asynchronously
+            Utils.LogTrace(traceEntry, true, SuccessHandler, FailureHandler);    
+        }
+    }
+
+})(window.loggingSample = window.loggingSample || {});
+
+
