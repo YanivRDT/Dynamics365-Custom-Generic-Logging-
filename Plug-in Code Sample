@@ -1,0 +1,61 @@
+using Microsoft.Xrm.Sdk;
+using System;
+using System.ServiceModel;
+
+namespace Extending.Dyn365.v9.Plugin.Plugins
+{
+    //demonstrate tracing and excetion logging 
+    public class LogTraceAndException : IPlugin
+    {
+        public void Execute(IServiceProvider serviceProvider)
+        {
+            // Obtain the execution context from the service provider
+            IPluginExecutionContext context = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
+            // Get a reference to the organization service
+            IOrganizationServiceFactory factory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
+            IOrganizationService organizationService = factory.CreateOrganizationService(context.UserId);
+
+            //define a trace entry, all attributes are optional except title 
+            Log traceEntry1 = new Log
+            {
+                title = "ServerSideLogging: Execute",
+                description = "Execution end",
+                //replace user id with an valid one
+                relatedUser = new EntityReference("systemuser", 
+                    Guid.Parse("37ACCC73-0FCE-474B-A206-19C08163438B")),
+                relatedBusinessRecordURL = "https://YOURORGNAME.crm.dynamics.com/main.aspx?etc=1&extraqs=&histKey=87055256&id=%7b381FA757-60D7-E811-A97E-000D3AB20035%7d",
+            };
+
+            //log trace entry, get reference token back 
+            string refToken1 = GenericLogging.Log(traceEntry1, 
+                GenericLogging.LogType.Trace, organizationService);
+
+            try
+            {
+                //some exception raising code.
+                //If transaction is rolled back, Log entries will persist
+                throw new Exception("An error occurred, please notify the System Administrator");
+            }
+            catch (Exception ex)
+            {
+                //define an exception entry 
+                Log excptionEntry = new Log
+                {
+                    title = "ServerSideLogging: Execute",
+                    errorMessage = ex.Message,
+                    stackTrace = ex.StackTrace
+                };
+
+                //log exception entry, get reference token back
+                string refToken2 = GenericLogging.Log(excptionEntry,
+                    GenericLogging.LogType.Exception,
+                    organizationService);
+
+                throw new InvalidPluginExecutionException(
+                    string.Format("An error occurred, please notify the System Administrator. Reference token: {0}", 
+                    refToken2));
+            }
+        }
+    }
+}
+
