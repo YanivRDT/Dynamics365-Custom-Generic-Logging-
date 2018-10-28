@@ -1,0 +1,162 @@
+///demonstrating logging trace and exception 
+
+(function (ns) {
+    //constants
+    var Constants = {
+        ODATA_ENDPOINT_URI: "/api/data/v9.0/",
+        LOG_TRACE_TYPE_CODE: 221490000,
+        LOG_EXCEPTION_TYPE_CODE: 221490001,
+        STATUS_CODE_OK: 200
+    };
+
+    //members
+
+    //private methods
+
+    //extract Global Context object 
+    getContext = function () {
+        var result = null;
+
+        if (typeof GetGlobalContext != "undefined") {
+            result = GetGlobalContext();
+        }
+        else {
+            if (typeof Xrm != "undefined") {
+                result = Xrm.Page.context;
+            }
+            else {
+                throw new Error(Constants.ERR_NO_CONTEXT);
+            }
+        }
+
+        return result;
+    }
+
+    ///Activate Custom Action 
+    activateCustomAction = function (actionName, actionParams, isAsync, successHandler, failureHandler) {
+
+        var result = null;
+
+        //set OData end-point
+        var ODataEndpoint = getContext().getClientUrl() + Constants.ODATA_ENDPOINT_URI;
+
+        //define request
+        var req = new XMLHttpRequest();
+        req.open("POST", ODataEndpoint + actionName, isAsync);
+        req.setRequestHeader("Accept", "application/json");
+        req.setRequestHeader("Content-Type", "application/json; charset=utf-8");
+        req.setRequestHeader("OData-MaxVersion", "4.0");
+        req.setRequestHeader("OData-Version", "4.0");
+        req.onreadystatechange = function () {
+            if (this.readyState == 4) {
+                req.onreadystatechange = null;
+
+                //handle success
+                if (this.status == Constants.STATUS_CODE_OK) {
+                    result = JSON.parse(this.response).referenceToken;
+
+                    if ((successHandler) && (isAsync)) {
+                        successHandler(result);
+                    }
+                }
+                //handle failure
+                else {
+                    result = JSON.parse(this.response).error.message;
+
+                    if ((failureHandler) && (isAsync)) {
+                        failureHandler(result);
+                    }
+                }
+            }
+        };
+
+        //send request 
+        req.send(window.JSON.stringify(actionParams));
+
+        return result;
+    }
+
+    ///Assemble trace parameters object 
+    assembleLogParams = function (logEntry) {
+
+        var result = {};
+
+        result.title = logEntry.title;
+
+        if (logEntry.description != null) {
+            result.description = logEntry.description;
+        }
+
+        if (logEntry.relatedUserId != null) {
+            result.relatedUser = {
+                    "@odata.type": "Microsoft.Dynamics.CRM.systemuser",
+                    "systemuserid": logEntry.relatedUserId,
+                }
+        }
+
+        if (logEntry.relatedBusinessRecordURL != null) {
+            result.relatedBusinessRecordURL = logEntry.relatedBusinessRecordURL;
+        }
+
+        if (logEntry.relatedUserId != null) {
+            result.relatedBusinessRecordId = logEntry.relatedUserId;
+        }
+
+        if (logEntry.errorMessage != null) {
+            result.errorMessage = logEntry.errorMessage;
+        }
+
+        if (logEntry.stackTrace != null) {
+            result.stackTrace = logEntry.stackTrace;
+        }
+
+        return result;
+    }
+
+    //public methods 
+
+    //log trace entry 
+    ns.LogTrace = function (logEntry, isAsync, successHandler, failureHandler) {
+        
+        var result = null;
+
+        if (isAsync == null) {
+            isAsync = true;
+        }
+
+        //assemble trace parameters 
+        var traceParams = assembleLogParams(logEntry);
+
+        //set log type to trace
+        traceParams.type = Constants.LOG_TRACE_TYPE_CODE;
+
+        //execute logging Action
+        result = activateCustomAction("dyn_Log", traceParams, isAsync, successHandler, failureHandler);       
+
+        return result;
+    }
+
+    //log exception record 
+    ns.LogException = function (logEntry, isAsync, successHandler, failureHandler) {
+        debugger
+        var result = null;
+
+        if (isAsync == null ) {
+            isAsync = true;
+        }
+
+        //assemble trace parameters 
+        var traceParams = assembleLogParams(logEntry);
+
+        //set log type to trace
+        traceParams.type = Constants.LOG_EXCEPTION_TYPE_CODE;
+
+        //execute logging Action and return reference token
+        result = activateCustomAction("dyn_Log", traceParams, isAsync, successHandler, failureHandler);
+
+        return result;
+    }
+
+})(window.Utils = window.Utils || {});
+
+
