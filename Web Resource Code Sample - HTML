@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Logging Sample</title>
+    <script src="ClientGlobalContext.js.aspx" type="text/javascript"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="dyn_utils.js"></script>
+    <script src="dyn_loggingSample.js"></script>
+</head>
+<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">
+    <table>
+        <tr>
+            <td>Trace Title</td>
+            <td>
+                <input id="title" type="text" required />
+            </td>
+        </tr>
+        <tr>
+            <td>Trace Description</td>
+            <td>
+                <input id="description" type="text" />
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <br />
+                <input type="button" onclick="loggingSample.LogTraceRecord()" value="Log Trace" />
+            </td>
+            <td>
+                <br />
+                <input type="button" onclick="loggingSample.DoSomeBusinessLogic()" value="Execute Business Logic" />
+            </td>
+        </tr>
+    </table>
+    <div id="userMessages"></div>
+</body>
+</html>
